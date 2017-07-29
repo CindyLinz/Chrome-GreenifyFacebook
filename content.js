@@ -66,24 +66,172 @@ function greenify(style, name){
   if( match ){
     match.shift();
     var hsv = rgb2hsv(match);
-    if( .45 < hsv[0] && hsv[0] < .75 ){
+    if( .50 < hsv[0] && hsv[0] < .70 ){
       var rgb = hsv2rgb(hsv[0]-.3, hsv[1], hsv[2]);
       var value2 = value.replace(/(rgba?\s*\()(\d+\.?\d*)(\s*,\s*)(\d+\.?\d*)(\s*,\s*)(\d+\.?\d*)/, '$1' + rgb[0] + '$3' + rgb[1] + '$5' + rgb[2]);
-      //console.warn(value, match, JSON.stringify(hsv), rgb, value2);
       style.setProperty(name, value2);
     }
   }
+}
 
-  if( value.match(/uL7V6OUUkIM/) )
-    style.setProperty(name, 'url(' + chrome.runtime.getURL('emotion.png') + ')');
-  if( value.match(/2CZiT44LtsO/) )
-    style.setProperty(name, 'url(' + chrome.runtime.getURL('sign.png') + ')');
-  if( value.match(/ux2RLcXFr3U/) )
-    style.setProperty(name, 'url(' + chrome.runtime.getURL('menu.png') + ')');
-  if( value.match(/YkzZIp8bp1V/) )
-    style.setProperty(name, 'url(' + chrome.runtime.getURL('tag.png') + ')');
-  if( value.match(/-vhShBXn2pa/) )
-    style.setProperty(name, 'url(' + chrome.runtime.getURL('big-sign.png') + ')');
+var bg_images = {};
+function greenify_icon(style){
+  var url = style.getPropertyValue('background-image');
+  if( !url )
+    return;
+  var url_match = url.match(/url\("?(.*)"\)/);
+  if( !url_match )
+    return;
+  url = url_match[1];
+  if( url.match(/\.gif$/) )
+    return;
+
+  var w, h;
+  var img_size_match = (''+style.getPropertyValue('background-size')).match(/(\d+\.?\d*)\D+(\d+\.?\d*)/);
+  if( !img_size_match )
+    return;
+  w = img_size_match[1]-0;
+  h = img_size_match[2]-0;
+
+  var x, y;
+  var img_pos = style.getPropertyValue('background-position');
+  var img_pos_match = (''+img_pos).match(/(-?\d+\.?\d*)[^0-9-]+(-?\d+\.?\d*)/);
+  if( img_pos_match ){
+    x = -img_pos_match[1];
+    y = -img_pos_match[2];
+  }
+  else
+    x = y = 0;
+
+  function prepare_img(canvas){
+    var w = canvas.width;
+    var h = canvas.height;
+    var ctx = canvas.getContext('2d');
+    var img_data = ctx.getImageData(0, 0, w, h);
+    var data = img_data.data;
+    var visited = new Uint8Array(w*h);
+    var stack = new Uint32Array(w*h);
+    var sp;
+
+    var i, j;
+    for(i=w*h-1; i>=0; --i)
+      visited[i] = 0;
+
+    var p=3, q=0;
+    var ii, jj, pp, qq;
+    var has_blue, all_blue;
+    var hsv, rgb;
+    for(i=0; i<h; ++i)
+      for(j=0; j<w; ++j, p+=4, ++q){
+        if( visited[q] )
+          continue;
+        if( data[p]>0 ){
+          has_blue = false, all_blue = true;
+
+          visited[q] = 1;
+          stack[0] = q;
+          sp = 1;
+          while( sp>0 ){
+            qq = stack[--sp];
+
+            jj = qq % w;
+            ii = (qq-jj) / w;
+
+            pp = qq*4;
+            hsv = rgb2hsv([data[pp], data[pp+1], data[pp+2]]);
+            if( data[pp+3]>30 && hsv[1] > .05 ){
+              if( .50 < hsv[0] && hsv[0] < .70 )
+                has_blue = true;
+              else
+                all_blue = false;;
+            }
+
+            jj = qq % w;
+            ii = (qq-jj) / w;
+            if( ii>0 && !visited[qq-w] && data[pp-4*w+3]>0 ){
+              visited[qq-w] = 1;
+              stack[sp++] = qq-w;
+            }
+            if( ii<h-1 && !visited[qq+w] && data[pp+4*w+3]>0 ){
+              visited[qq+w] = 1;
+              stack[sp++] = qq+w;
+            }
+            if( jj>0 && !visited[qq-1] && data[pp-1]>0 ){
+              visited[qq-1] = 1;
+              stack[sp++] = qq-1;
+            }
+            if( jj<w-1 && !visited[qq+1] && data[pp+7]>0 ){
+              visited[qq+1] = 1;
+              stack[sp++] = qq+1;
+            }
+          }
+
+          if( !(has_blue && all_blue) )
+            continue;
+
+          visited[q] = 2;
+          stack[0] = q;
+          sp = 1;
+          while( sp>0 ){
+            qq = stack[--sp];
+
+            pp = qq*4;
+            hsv = rgb2hsv([data[pp], data[pp+1], data[pp+2]]);
+            if( data[pp+3]>30 && hsv[1] > .05 ){
+              rgb = hsv2rgb(hsv[0]-.3, hsv[1], hsv[2]);
+              data[pp] = rgb[0];
+              data[pp+1] = rgb[1];
+              data[pp+2] = rgb[2];
+            }
+
+            jj = qq % w;
+            ii = (qq-jj) / w;
+            if( ii>0 && visited[qq-w]==1 && data[pp-4*w+3]>0 ){
+              visited[qq-w] = 2;
+              stack[sp++] = qq-w;
+            }
+            if( ii<h-1 && visited[qq+w]==1 && data[pp+4*w+3]>0 ){
+              visited[qq+w] = 2;
+              stack[sp++] = qq+w;
+            }
+            if( jj>0 && visited[qq-1]==1 && data[pp-1]>0 ){
+              visited[qq-1] = 2;
+              stack[sp++] = qq-1;
+            }
+            if( jj<w-1 && visited[qq+1]==1 && data[pp+7]>0 ){
+              visited[qq+1] = 2;
+              stack[sp++] = qq+1;
+            }
+          }
+        }
+      }
+
+    ctx.putImageData(img_data, 0, 0);
+  }
+
+  if( bg_images[url] && bg_images[url] instanceof Array )
+    bg_images[url].push(style);
+  else if( bg_images[url] )
+    style.setProperty('background-image', bg_images[url]);
+  else{
+    bg_images[url] = [style];
+    var image = new Image;
+    image.onload = function(){
+      var canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(image, 0, 0, w, h);
+      prepare_img(canvas);
+      canvas.toBlob(function(blob){
+        var styles = bg_images[url];
+        var new_url = bg_images[url] = 'url(' + URL.createObjectURL(blob) + ')';
+        each(styles, function(style){
+          style.setProperty('background-image', new_url);
+        });
+      });
+    };
+    image.src = url;
+  }
 }
 
 each(document.styleSheets, function(sheet){
@@ -92,7 +240,7 @@ each(document.styleSheets, function(sheet){
       greenify(rule.style, 'background-color');
       greenify(rule.style, 'color');
       greenify(rule.style, 'border-color');
-      greenify(rule.style, 'background-image');
+      greenify_icon(rule.style);
     }
   });
 });
