@@ -1,3 +1,5 @@
+var threshold = .45;
+
 function each(arr, act){
   var i;
   for(i=0; i<arr.length; ++i)
@@ -35,8 +37,8 @@ function rgb2hsv(_rgb){
 };
 
 function protect_eyes(hsv){
-  if( hsv[1] * hsv[2] > .45 ){
-    var factor = Math.sqrt(.45/(hsv[1]*hsv[2]));
+  if( hsv[1] * hsv[2] > threshold ){
+    var factor = Math.sqrt(threshold/(hsv[1]*hsv[2]));
     return [hsv[0], factor*hsv[1], factor*hsv[2]];
   }
   return hsv;
@@ -284,7 +286,6 @@ function prepare_sheets(){
     }
   }
 }
-prepare_sheets();
 
 var stylesheet_observer = new MutationObserver(function(mutations){
   var need_change = false;
@@ -297,12 +298,7 @@ var stylesheet_observer = new MutationObserver(function(mutations){
   if( need_change )
     prepare_sheets();
 });
-stylesheet_observer.observe(document.head, {childList: true});
 
-each(document.querySelectorAll('*'), function(node){
-  if( node.style )
-    greenify_style(node.style);
-});
 var inlinestyle_observer = new MutationObserver(function(mutations){
   each(mutations, function(mutation){
     if( mutation.target.style )
@@ -314,9 +310,19 @@ var inlinestyle_observer = new MutationObserver(function(mutations){
       });
   });
 });
-inlinestyle_observer.observe(document.body, {subtree: true, attributes: true, childList: true});
 
-(function(){
+chrome.storage.sync.get('bright', function(items){
+  if( 'bright' in items )
+    threshold = items.bright / 1000;
+  else
+    threshold = .45;
+  prepare_sheets();
+
+  each(document.querySelectorAll('*'), function(node){
+    if( node.style )
+      greenify_style(node.style);
+  });
+
   var image = new Image;
   image.onload = function(){
     var canvas = document.createElement('canvas');
@@ -336,4 +342,13 @@ inlinestyle_observer.observe(document.body, {subtree: true, attributes: true, ch
     });
   };
   image.src = '/favicon.ico';
-})();
+
+  stylesheet_observer.observe(document.head, {childList: true});
+  inlinestyle_observer.observe(document.body, {subtree: true, attributes: true, childList: true});
+});
+
+chrome.runtime.onMessage.addListener(function(req, sender, res){
+  console.warn(req, sender);
+  if( req.act=='reload' )
+    window.location.reload();
+});
