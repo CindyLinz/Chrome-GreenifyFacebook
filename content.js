@@ -34,6 +34,14 @@ function rgb2hsv(_rgb){
   return [h, s, v];
 };
 
+function protect_eyes(hsv){
+  if( hsv[1] * hsv[2] > .45 ){
+    var factor = Math.sqrt(.45/(hsv[1]*hsv[2]));
+    return [hsv[0], factor*hsv[1], factor*hsv[2]];
+  }
+  return hsv;
+}
+
 function hsv2rgb(h, s, v){
   var c = v * s;
   var m = v - c;
@@ -67,9 +75,9 @@ function greenify(style, name){
     match.shift();
     var hsv = rgb2hsv(match);
     if( .50 < hsv[0] && hsv[0] < .70 ){
+      hsv = protect_eyes(hsv);
       var rgb = hsv2rgb(hsv[0]-.3, hsv[1], hsv[2]);
-      var value2 = value.replace(/(rgba?\s*\()(\d+\.?\d*)(\s*,\s*)(\d+\.?\d*)(\s*,\s*)(\d+\.?\d*)/, '$1' + rgb[0] + '$3' + rgb[1] + '$5' + rgb[2]);
-      style.setProperty(name, value2);
+      style.setProperty(name, value.replace(/(rgba?\s*\()(\d+\.?\d*)(\s*,\s*)(\d+\.?\d*)(\s*,\s*)(\d+\.?\d*)/, '$1' + rgb[0] + '$3' + rgb[1] + '$5' + rgb[2]));
     }
   }
 }
@@ -178,6 +186,7 @@ function greenify_icon(style){
             pp = qq*4;
             hsv = rgb2hsv([data[pp], data[pp+1], data[pp+2]]);
             if( data[pp+3]>30 && hsv[1] > .05 ){
+              hsv = protect_eyes(hsv);
               rgb = hsv2rgb(hsv[0]-.3, hsv[1], hsv[2]);
               data[pp] = rgb[0];
               data[pp+1] = rgb[1];
