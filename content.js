@@ -82,6 +82,114 @@ function greenify(style, name){
   }
 }
 
+function prepare_img(canvas){
+  var w = canvas.width;
+  var h = canvas.height;
+  var ctx = canvas.getContext('2d');
+  var img_data = ctx.getImageData(0, 0, w, h);
+  var data = img_data.data;
+  var visited = new Uint8Array(w*h);
+  var stack = new Uint32Array(w*h);
+  var sp;
+
+  var i, j;
+  for(i=w*h-1; i>=0; --i)
+    visited[i] = 0;
+
+  var p=3, q=0;
+  var ii, jj, pp, qq;
+  var has_blue, all_blue;
+  var hsv, rgb;
+  for(i=0; i<h; ++i)
+    for(j=0; j<w; ++j, p+=4, ++q){
+      if( visited[q] )
+        continue;
+      if( data[p]>0 ){
+        has_blue = false, all_blue = true;
+
+        visited[q] = 1;
+        stack[0] = q;
+        sp = 1;
+        while( sp>0 ){
+          qq = stack[--sp];
+
+          jj = qq % w;
+          ii = (qq-jj) / w;
+
+          pp = qq*4;
+          hsv = rgb2hsv([data[pp], data[pp+1], data[pp+2]]);
+          if( data[pp+3]>30 && hsv[1] > .05 ){
+            if( .50 < hsv[0] && hsv[0] < .70 )
+              has_blue = true;
+            else
+              all_blue = false;;
+          }
+
+          jj = qq % w;
+          ii = (qq-jj) / w;
+          if( ii>0 && !visited[qq-w] && data[pp-4*w+3]>0 ){
+            visited[qq-w] = 1;
+            stack[sp++] = qq-w;
+          }
+          if( ii<h-1 && !visited[qq+w] && data[pp+4*w+3]>0 ){
+            visited[qq+w] = 1;
+            stack[sp++] = qq+w;
+          }
+          if( jj>0 && !visited[qq-1] && data[pp-1]>0 ){
+            visited[qq-1] = 1;
+            stack[sp++] = qq-1;
+          }
+          if( jj<w-1 && !visited[qq+1] && data[pp+7]>0 ){
+            visited[qq+1] = 1;
+            stack[sp++] = qq+1;
+          }
+        }
+
+        if( !(has_blue && all_blue) )
+          continue;
+
+        visited[q] = 2;
+        stack[0] = q;
+        sp = 1;
+        while( sp>0 ){
+          qq = stack[--sp];
+
+          pp = qq*4;
+          hsv = rgb2hsv([data[pp], data[pp+1], data[pp+2]]);
+          if( data[pp+3]>30 && hsv[1] > .05 ){
+            hsv = protect_eyes(hsv);
+            rgb = hsv2rgb(hsv[0]-.3, hsv[1], hsv[2]);
+            data[pp] = rgb[0];
+            data[pp+1] = rgb[1];
+            data[pp+2] = rgb[2];
+          }
+
+          jj = qq % w;
+          ii = (qq-jj) / w;
+          if( ii>0 && visited[qq-w]==1 && data[pp-4*w+3]>0 ){
+            visited[qq-w] = 2;
+            stack[sp++] = qq-w;
+          }
+          if( ii<h-1 && visited[qq+w]==1 && data[pp+4*w+3]>0 ){
+            visited[qq+w] = 2;
+            stack[sp++] = qq+w;
+          }
+          if( jj>0 && visited[qq-1]==1 && data[pp-1]>0 ){
+            visited[qq-1] = 2;
+            stack[sp++] = qq-1;
+          }
+          if( jj<w-1 && visited[qq+1]==1 && data[pp+7]>0 ){
+            visited[qq+1] = 2;
+            stack[sp++] = qq+1;
+          }
+        }
+      }
+    }
+
+  ctx.putImageData(img_data, 0, 0);
+}
+
+
 var bg_images = {};
 function greenify_icon(style){
   var url = style.getPropertyValue('background-image');
@@ -110,113 +218,6 @@ function greenify_icon(style){
   }
   else
     x = y = 0;
-
-  function prepare_img(canvas){
-    var w = canvas.width;
-    var h = canvas.height;
-    var ctx = canvas.getContext('2d');
-    var img_data = ctx.getImageData(0, 0, w, h);
-    var data = img_data.data;
-    var visited = new Uint8Array(w*h);
-    var stack = new Uint32Array(w*h);
-    var sp;
-
-    var i, j;
-    for(i=w*h-1; i>=0; --i)
-      visited[i] = 0;
-
-    var p=3, q=0;
-    var ii, jj, pp, qq;
-    var has_blue, all_blue;
-    var hsv, rgb;
-    for(i=0; i<h; ++i)
-      for(j=0; j<w; ++j, p+=4, ++q){
-        if( visited[q] )
-          continue;
-        if( data[p]>0 ){
-          has_blue = false, all_blue = true;
-
-          visited[q] = 1;
-          stack[0] = q;
-          sp = 1;
-          while( sp>0 ){
-            qq = stack[--sp];
-
-            jj = qq % w;
-            ii = (qq-jj) / w;
-
-            pp = qq*4;
-            hsv = rgb2hsv([data[pp], data[pp+1], data[pp+2]]);
-            if( data[pp+3]>30 && hsv[1] > .05 ){
-              if( .50 < hsv[0] && hsv[0] < .70 )
-                has_blue = true;
-              else
-                all_blue = false;;
-            }
-
-            jj = qq % w;
-            ii = (qq-jj) / w;
-            if( ii>0 && !visited[qq-w] && data[pp-4*w+3]>0 ){
-              visited[qq-w] = 1;
-              stack[sp++] = qq-w;
-            }
-            if( ii<h-1 && !visited[qq+w] && data[pp+4*w+3]>0 ){
-              visited[qq+w] = 1;
-              stack[sp++] = qq+w;
-            }
-            if( jj>0 && !visited[qq-1] && data[pp-1]>0 ){
-              visited[qq-1] = 1;
-              stack[sp++] = qq-1;
-            }
-            if( jj<w-1 && !visited[qq+1] && data[pp+7]>0 ){
-              visited[qq+1] = 1;
-              stack[sp++] = qq+1;
-            }
-          }
-
-          if( !(has_blue && all_blue) )
-            continue;
-
-          visited[q] = 2;
-          stack[0] = q;
-          sp = 1;
-          while( sp>0 ){
-            qq = stack[--sp];
-
-            pp = qq*4;
-            hsv = rgb2hsv([data[pp], data[pp+1], data[pp+2]]);
-            if( data[pp+3]>30 && hsv[1] > .05 ){
-              hsv = protect_eyes(hsv);
-              rgb = hsv2rgb(hsv[0]-.3, hsv[1], hsv[2]);
-              data[pp] = rgb[0];
-              data[pp+1] = rgb[1];
-              data[pp+2] = rgb[2];
-            }
-
-            jj = qq % w;
-            ii = (qq-jj) / w;
-            if( ii>0 && visited[qq-w]==1 && data[pp-4*w+3]>0 ){
-              visited[qq-w] = 2;
-              stack[sp++] = qq-w;
-            }
-            if( ii<h-1 && visited[qq+w]==1 && data[pp+4*w+3]>0 ){
-              visited[qq+w] = 2;
-              stack[sp++] = qq+w;
-            }
-            if( jj>0 && visited[qq-1]==1 && data[pp-1]>0 ){
-              visited[qq-1] = 2;
-              stack[sp++] = qq-1;
-            }
-            if( jj<w-1 && visited[qq+1]==1 && data[pp+7]>0 ){
-              visited[qq+1] = 2;
-              stack[sp++] = qq+1;
-            }
-          }
-        }
-      }
-
-    ctx.putImageData(img_data, 0, 0);
-  }
 
   if( bg_images[url] && bg_images[url] instanceof Array )
     bg_images[url].push(style);
@@ -314,3 +315,25 @@ var inlinestyle_observer = new MutationObserver(function(mutations){
   });
 });
 inlinestyle_observer.observe(document.body, {subtree: true, attributes: true, childList: true});
+
+(function(){
+  var image = new Image;
+  image.onload = function(){
+    var canvas = document.createElement('canvas');
+    canvas.width = image.width;
+    canvas.height = image.height;
+    canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+    prepare_img(canvas);
+    canvas.toBlob(function(blob){
+      each(document.head.querySelectorAll('link[rel=icon],link[rel="shortcut icon"]'), function(link){
+        document.head.removeChild(link);
+      });
+      var link = document.createElement('link');
+      link.rel = 'shortcut icon';
+      link.type = 'image/x-icon';
+      link.href = URL.createObjectURL(blob);
+      document.head.appendChild(link);
+    });
+  };
+  image.src = '/favicon.ico';
+})();
