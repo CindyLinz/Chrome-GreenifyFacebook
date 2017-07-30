@@ -245,6 +245,13 @@ function greenify_icon(style){
 
 var prepared_sheets = [];
 
+function greenify_style(style){
+  greenify(style, 'background-color');
+  greenify(style, 'color');
+  greenify(style, 'border-color');
+  greenify_icon(style);
+}
+
 function prepare_sheets(){
   each(document.styleSheets, function(sheet){
     var done = false;
@@ -257,12 +264,8 @@ function prepare_sheets(){
 
     prepared_sheets.push(sheet);
     each(sheet.cssRules || sheet.rules || [], function(rule){
-      if( rule.style ){
-        greenify(rule.style, 'background-color');
-        greenify(rule.style, 'color');
-        greenify(rule.style, 'border-color');
-        greenify_icon(rule.style);
-      }
+      if( rule.style )
+        greenify_style(rule.style);
     });
   });
 
@@ -282,7 +285,7 @@ function prepare_sheets(){
 }
 prepare_sheets();
 
-var observer = new MutationObserver(function(mutations, observer){
+var stylesheet_observer = new MutationObserver(function(mutations){
   var need_change = false;
   each(mutations, function(mutation){
     each(mutation.addedNodes, function(node){
@@ -293,4 +296,16 @@ var observer = new MutationObserver(function(mutations, observer){
   if( need_change )
     prepare_sheets();
 });
-observer.observe(document.head, {childList: true});
+stylesheet_observer.observe(document.head, {childList: true});
+
+each(document.querySelectorAll('*'), function(node){
+  if( node.style )
+    greenify_style(node.style);
+});
+var inlinestyle_observer = new MutationObserver(function(mutations){
+  each(mutations, function(mutation){
+    if( mutation.target.style )
+      greenify_style(mutation.target.style);
+  });
+});
+inlinestyle_observer.observe(document.body, {subtree: true, attributeFilter: ['style']});
