@@ -243,13 +243,54 @@ function greenify_icon(style){
   }
 }
 
-each(document.styleSheets, function(sheet){
-  each(sheet.cssRules || sheet.rules || [], function(rule){
-    if( rule.style ){
-      greenify(rule.style, 'background-color');
-      greenify(rule.style, 'color');
-      greenify(rule.style, 'border-color');
-      greenify_icon(rule.style);
-    }
+var prepared_sheets = [];
+
+function prepare_sheets(){
+  each(document.styleSheets, function(sheet){
+    var done = false;
+    each(prepared_sheets, function(prepared_sheet){
+      if( prepared_sheet===sheet )
+        done = true;
+    });
+    if( done )
+      return;
+
+    prepared_sheets.push(sheet);
+    each(sheet.cssRules || sheet.rules || [], function(rule){
+      if( rule.style ){
+        greenify(rule.style, 'background-color');
+        greenify(rule.style, 'color');
+        greenify(rule.style, 'border-color');
+        greenify_icon(rule.style);
+      }
+    });
   });
+
+  var i, found;
+  for(i=0; i<prepared_sheets.length; ++i){
+    found = false;
+    each(document.styleSheets, function(sheet){
+      if( sheet===prepared_sheets[i] )
+        found = true;
+    });
+    if( !found ){
+      prepared_sheets[i] = prepared_sheets[prepared_sheets.length-1];
+      prepared_sheets.pop();
+      --i;
+    }
+  }
+}
+prepare_sheets();
+
+var observer = new MutationObserver(function(mutations, observer){
+  var need_change = false;
+  each(mutations, function(mutation){
+    each(mutation.addedNodes, function(node){
+      if( node.tagName=='LINK' && node.rel=='stylesheet' )
+        need_change = true;
+    });
+  });
+  if( need_change )
+    prepare_sheets();
 });
+observer.observe(document.head, {childList: true});
