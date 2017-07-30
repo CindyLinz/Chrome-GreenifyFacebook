@@ -306,6 +306,11 @@ var inlinestyle_observer = new MutationObserver(function(mutations){
   each(mutations, function(mutation){
     if( mutation.target.style )
       greenify_style(mutation.target.style);
+    if( mutation.target.querySelectorAll )
+      each(mutation.target.querySelectorAll('*'), function(node_in_node){
+        if( node_in_node.style )
+          greenify_style(node_in_node.style);
+      });
   });
 });
-inlinestyle_observer.observe(document.body, {subtree: true, attributeFilter: ['style']});
+inlinestyle_observer.observe(document.body, {subtree: true, attributes: true, childList: true});
