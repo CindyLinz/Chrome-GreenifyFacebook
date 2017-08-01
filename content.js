@@ -252,6 +252,14 @@ function greenify_style(style){
   greenify(style, 'background-color');
   greenify(style, 'color');
   greenify(style, 'border-color');
+  greenify(style, 'border-left-color');
+  greenify(style, 'border-right-color');
+  greenify(style, 'border-top-color');
+  greenify(style, 'border-bottom-color');
+  greenify(style, 'outline-color');
+  greenify(style, 'caret-color');
+  greenify(style, 'column-rule-color');
+  greenify(style, 'text-decoration-color');
   greenify_icon(style);
 }
 
@@ -267,8 +275,12 @@ function prepare_sheets(){
 
     prepared_sheets.push(sheet);
     each(sheet.cssRules || sheet.rules || [], function(rule){
-      if( rule.style )
+      if( rule instanceof CSSStyleRule )
         greenify_style(rule.style);
+      else if( rule instanceof CSSKeyframesRule )
+        each(rule.cssRules, function(keyframe){
+          greenify_style(keyframe.style);
+        });
     });
   });
 
