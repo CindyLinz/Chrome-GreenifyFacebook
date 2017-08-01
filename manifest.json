@@ -17,9 +17,4 @@
 , "permissions":
   [ "storage"
   ]
-, "applications":
-  { "gecko":
-    { "id": "@GreenifyFacebook"
-    }
-  }
 }

@@ -9,6 +9,26 @@
 
 ---
 
+# Packing
+
+The packing script `pack.pl` script uses a perl library `Archive::Zip`. You can install it from CPAN or system package manager. It's named `libarchive-zip-perl` in Debian, or `perl-archive-zip` in Arch.
+
+  * for Chrome
+
+    ```
+    $ perl pack.pl
+    Create Chrome pack GreenifyFacebook.zip done.
+    ```
+
+  * for Firefox
+
+    ```
+    $ perl pack.pl firefox
+    Create Firefox pack GreenifyFacebook.xpi done.
+    ```
+
+---
+
 # Making-of
 
 起初創作 GreenifyFacebook 的時候, 沒有想過會有人拿它來用, 一開始我只是要拿來笑的...... 我在更之前兩天看了國民黨很認真地瞎鬧, 或說是瞎鬧得很認真, 而且越演越烈越鬧越誇張, 處於一種不知道該說什麼, 這時候只能傻笑了的狀態..... 到了星期五半夜看到了 [Ronny Wang](https://www.facebook.com/ronny.wang.tw) 貼的瞎鬧 script, 心念一動, 既然只能笑了, 那就好好地痛快地笑一場吧......
