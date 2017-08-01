@@ -88,11 +88,16 @@ function prepare_img(canvas){
   var w = canvas.width;
   var h = canvas.height;
   var ctx = canvas.getContext('2d');
-  var img_data = ctx.getImageData(0, 0, w, h);
-  var data = img_data.data;
+  var img_data;
   var visited = new Uint8Array(w*h);
   var stack = new Uint32Array(w*h);
   var sp;
+  try {
+    img_data = ctx.getImageData(0, 0, w, h);
+  } catch(e) { console.warn(e) }
+  if( !img_data )
+    return false;
+  var data = img_data.data;
 
   var i, j;
   for(i=w*h-1; i>=0; --i)
@@ -189,6 +194,7 @@ function prepare_img(canvas){
     }
 
   ctx.putImageData(img_data, 0, 0);
+  return true;
 }
 
 
@@ -201,7 +207,7 @@ function greenify_icon(style){
   if( !url_match )
     return;
   url = url_match[1];
-  if( url.match(/\.gif$/) )
+  if( url.match(/^blob:|\.gif$/) )
     return;
 
   var w, h;
@@ -233,14 +239,15 @@ function greenify_icon(style){
       canvas.width = w;
       canvas.height = h;
       canvas.getContext('2d').drawImage(image, 0, 0, w, h);
-      prepare_img(canvas);
-      canvas.toBlob(function(blob){
-        var styles = bg_images[url];
-        var new_url = bg_images[url] = 'url(' + URL.createObjectURL(blob) + ')';
-        each(styles, function(style){
-          style.setProperty('background-image', new_url);
+      if( prepare_img(canvas) ){
+        canvas.toBlob(function(blob){
+          var styles = bg_images[url];
+          var new_url = bg_images[url] = 'url(' + URL.createObjectURL(blob) + ')';
+          each(styles, function(style){
+            style.setProperty('background-image', new_url);
+          });
         });
-      });
+      }
     };
     image.src = url;
   }
@@ -329,17 +336,18 @@ chrome.storage.sync.get('bright', function(items){
     canvas.width = image.width;
     canvas.height = image.height;
     canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
-    prepare_img(canvas);
-    canvas.toBlob(function(blob){
-      each(document.head.querySelectorAll('link[rel=icon],link[rel="shortcut icon"]'), function(link){
-        document.head.removeChild(link);
+    if( prepare_img(canvas) ){
+      canvas.toBlob(function(blob){
+        each(document.head.querySelectorAll('link[rel=icon],link[rel="shortcut icon"]'), function(link){
+          document.head.removeChild(link);
+        });
+        var link = document.createElement('link');
+        link.rel = 'shortcut icon';
+        link.type = 'image/x-icon';
+        link.href = URL.createObjectURL(blob);
+        document.head.appendChild(link);
       });
-      var link = document.createElement('link');
-      link.rel = 'shortcut icon';
-      link.type = 'image/x-icon';
-      link.href = URL.createObjectURL(blob);
-      document.head.appendChild(link);
-    });
+    }
   };
   image.src = '/favicon.ico';
 
@@ -348,7 +356,6 @@ chrome.storage.sync.get('bright', function(items){
 });
 
 chrome.runtime.onMessage.addListener(function(req, sender, res){
-  console.warn(req, sender);
   if( req.act=='reload' )
     window.location.reload();
 });
