@@ -20,11 +20,18 @@ The packing script `pack.pl` script uses a perl library `Archive::Zip`. You can 
     Create Chrome pack GreenifyFacebook.zip done.
     ```
 
-  * for Firefox
+  * for Firefox public addon
 
     ```
     $ perl pack.pl firefox
     Create Firefox pack GreenifyFacebook.xpi done.
+    ```
+
+  * for Firefox private addon
+
+    ```
+    $ perl pack.pl firefox-private
+    Create Firefox pack GreenifyFacebook-private.xpi done.
     ```
 
 ---
