@@ -249,6 +249,8 @@ function greenify_icon(style){
 var prepared_sheets = [];
 
 function greenify_style(style){
+  if( !style )
+    return;
   greenify(style, 'background-color');
   greenify(style, 'color');
   greenify(style, 'border-color');
