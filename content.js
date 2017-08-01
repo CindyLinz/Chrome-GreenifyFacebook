@@ -301,12 +301,15 @@ var stylesheet_observer = new MutationObserver(function(mutations){
 
 var inlinestyle_observer = new MutationObserver(function(mutations){
   each(mutations, function(mutation){
-    if( mutation.target.style )
+    if( mutation.type=='attributes' && mutation.target.style )
       greenify_style(mutation.target.style);
-    if( mutation.target.querySelectorAll )
-      each(mutation.target.querySelectorAll('*'), function(node_in_node){
-        if( node_in_node.style )
-          greenify_style(node_in_node.style);
+    else if( mutation.type=='childList' )
+      each(mutation.addedNodes, function(node){
+        if( node.querySelectorAll )
+          each(node.querySelectorAll('*'), function(node_in_node){
+            if( node_in_node.style )
+              greenify_style(node_in_node.style);
+          });
       });
   });
 });
