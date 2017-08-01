@@ -1,7 +1,7 @@
 { "manifest_version": 2
 , "name": "GreenifyFacebook"
 , "description": "Change the blue Facebook into a green Facebook"
-, "version": "1.6"
+, "version": "1.7"
 , "content_scripts":
   [ { "matches": ["https://www.facebook.com/*"]
     , "js": ["content.js"]
