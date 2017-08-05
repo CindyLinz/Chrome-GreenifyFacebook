@@ -66,29 +66,34 @@ function hsv2rgb(h, s, v){
   return [r*255|0,g*255|0,b*255|0];
 };
 
-function preview(threshold){
+function preview(bright_threshold, color_shift){
   each(document.querySelectorAll('tr'), function(tr){
     var match = tr.firstChild.style.getPropertyValue('background-color').match(/rgba?\s*\(\s*(\d+\.?\d*)\s*,\s*(\d+\.?\d*)\s*,\s*(\d+\.?\d*)/);
     match.shift();
-    var hsv = protect_eyes(rgb2hsv(match), threshold/1000);
-    var rgb = hsv2rgb(hsv[0]-.3, hsv[1], hsv[2]);
+    var hsv = protect_eyes(rgb2hsv(match), bright_threshold/1000);
+    var hue = hsv[0] - color_shift/1000;
+    if( hue < 0 )
+      hue += 1;
+    var rgb = hsv2rgb(hue, hsv[1], hsv[2]);
     tr.lastChild.style.setProperty('background-color', 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')');
   });
 }
 
-var slider = document.querySelector('#slider');
+var bright_slider = document.querySelector('#bright');
+var color_slider = document.querySelector('#color');
 
-slider.oninput = function(ev){
-  preview(ev.target.value);
+bright_slider.oninput = color_slider.oninput = function(){
+  preview(bright_slider.value, color_slider.value);
 };
 
 document.querySelector('#default_btn').onclick = function(){
-  slider.value = 450;
-  preview(slider.value);
+  bright_slider.value = 450;
+  color_slider.value = 300;
+  preview(bright_slider.value, color_slider.value);
 };
 
 document.querySelector('#commit_btn').onclick = function(){
-  chrome.storage.sync.set({bright: slider.value}, function(){
+  chrome.storage.sync.set({bright: bright_slider.value, color: color_slider.value}, function(){
     chrome.runtime.sendMessage({act: 'reload'});
     chrome.tabs.query({}, function(tabs){
       var waiting = tabs.length;
@@ -103,10 +108,14 @@ document.querySelector('#commit_btn').onclick = function(){
   });
 };
 
-chrome.storage.sync.get('bright', function(items){
+chrome.storage.sync.get(['bright','color'], function(items){
   if( 'bright' in items )
-    slider.value = items.bright;
+    bright_slider.value = items.bright;
   else
-    slider.value = 450;
-  preview(slider.value);
+    bright_slider.value = 450;
+  if( 'color' in items )
+    color_slider.value = items.color;
+  else
+    color_slider.value = 300;
+  preview(bright_slider.value, color_slider.value);
 });

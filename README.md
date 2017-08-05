@@ -99,6 +99,10 @@ The packing script `pack.pl` script uses a perl library `Archive::Zip`. You can 
 
     將更多 CSS properties 納入處理範圍, 並且加入處理 CSS animation keyframes 裡的 styles. 點文章的「時間」的時候會進入顯示該篇文章的畫面, 而剛載入的時候會出現藍色框框若干秒鐘再退去... 這一版會把它變成綠色的.
 
+  * v1.9
+
+    加上可以調整為其他顏色的功能.
+
   * 未來待解的問題
 
       - 我發現抓 icon 圖檔的動作有時候會失敗, 這個待解決

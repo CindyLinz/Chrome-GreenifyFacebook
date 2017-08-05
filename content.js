@@ -1,4 +1,5 @@
 var threshold = .45;
+var color = .30;
 
 function each(arr, act){
   var i;
@@ -78,7 +79,10 @@ function greenify(style, name){
     var hsv = rgb2hsv(match);
     if( .50 < hsv[0] && hsv[0] < .70 ){
       hsv = protect_eyes(hsv);
-      var rgb = hsv2rgb(hsv[0]-.3, hsv[1], hsv[2]);
+      var hue = hsv[0] - color;
+      if( hue < 0 )
+        hue += 1;
+      var rgb = hsv2rgb(hue, hsv[1], hsv[2]);
       style.setProperty(name, value.replace(/(rgba?\s*\()(\d+\.?\d*)(\s*,\s*)(\d+\.?\d*)(\s*,\s*)(\d+\.?\d*)/, '$1' + rgb[0] + '$3' + rgb[1] + '$5' + rgb[2]));
     }
   }
@@ -160,7 +164,10 @@ function prepare_img(canvas){
           hsv = rgb2hsv([data[pp], data[pp+1], data[pp+2]]);
           if( data[pp+3]>30 && hsv[1] > .05 ){
             hsv = protect_eyes(hsv);
-            rgb = hsv2rgb(hsv[0]-.3, hsv[1], hsv[2]);
+            var hue = hsv[0] - color;
+            if( hue < 0 )
+              hue += 1;
+            rgb = hsv2rgb(hue, hsv[1], hsv[2]);
             data[pp] = rgb[0];
             data[pp+1] = rgb[1];
             data[pp+2] = rgb[2];
@@ -313,10 +320,15 @@ var stylesheet_observer = new MutationObserver(function(mutations){
     prepare_sheets();
 });
 
-var inlinestyle_observer = new MutationObserver(function(mutations){
+var inlinestyle_observer = new MutationObserver(function(mutations, observer){
+  observer.disconnect();
   each(mutations, function(mutation){
-    if( mutation.type=='attributes' && mutation.target.style )
-      greenify_style(mutation.target.style);
+    if( mutation.type=='attributes' && mutation.target.style ){
+      var new_match = mutation.target.style.cssText.match(/(^|\s|;)color:\s*([^;]+)/);
+      var old_match = mutation.oldValue ? mutation.oldValue.match(/(^|\s|;)color:\s*([^;]+)/) : null;
+      if( !old_match || new_match && old_match[2]!=new_match[2] )
+        greenify_style(mutation.target.style);
+    }
     else if( mutation.type=='childList' )
       each(mutation.addedNodes, function(node){
         if( node.querySelectorAll )
@@ -326,13 +338,18 @@ var inlinestyle_observer = new MutationObserver(function(mutations){
           });
       });
   });
+  observer.observe(document.body, {subtree: true, attributes: true, childList: true, attributeOldValue: true, attributeFilter: ['style']});
 });
 
-chrome.storage.sync.get('bright', function(items){
+chrome.storage.sync.get(['bright','color'], function(items){
   if( 'bright' in items )
     threshold = items.bright / 1000;
   else
     threshold = .45;
+  if( 'color' in items )
+    color = items.color / 1000;
+  else
+    color = .30;
   prepare_sheets();
 
   each(document.querySelectorAll('*'), function(node){
@@ -361,7 +378,7 @@ chrome.storage.sync.get('bright', function(items){
   image.src = '/favicon.ico';
 
   stylesheet_observer.observe(document.head, {childList: true});
-  inlinestyle_observer.observe(document.body, {subtree: true, attributes: true, childList: true});
+  inlinestyle_observer.observe(document.body, {subtree: true, attributes: true, childList: true, attributeOldValue: true, attributeFilter: ['style']});
 });
 
 chrome.runtime.onMessage.addListener(function(req, sender, res){
